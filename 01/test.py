@@ -13,6 +13,11 @@ check('2+2', '4')
 check('100', '100')
 check('-78901', '-78901')
 
+check('10 * 7 + - - 9 * -9 - 5 + 12', '-4')
+check('-150/25', '-6')
+check('100/5*2', '40')
+
+
 check('', err_str)
 check('2+a', err_str)
 check('hello world', err_str)
