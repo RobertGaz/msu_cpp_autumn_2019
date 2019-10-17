@@ -2,6 +2,12 @@ CC=g++
 
 all: calc
 
+run: calc
+	./calc
+    
+test: calc
+	python3 test.py
+
 calc: prog.o
 	$(CC) -o calc prog.o
 
