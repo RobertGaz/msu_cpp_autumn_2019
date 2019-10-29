@@ -1,9 +1,6 @@
 #include "matrix.h"
 
-Row::Row(int *arr, std::size_t len) {
-    row = arr;
-    n_columns = len;
-}
+Row::Row(int *arr, std::size_t len) : row(arr), n_columns(len) {}
 
 int& Row::operator[](std::size_t col) {
     if (col >= n_columns)
@@ -13,9 +10,7 @@ int& Row::operator[](std::size_t col) {
 } 
 
 
-Matrix::Matrix(std::size_t rows, std::size_t cols) {
-    n_rows = rows;
-    n_columns = cols;
+Matrix::Matrix(std::size_t rows, std::size_t cols) : n_rows(rows), n_columns(cols) {
     M = new int*[n_rows];
     for (int i = 0; i < n_rows; ++i) 
         M[i] = new int[n_columns];
