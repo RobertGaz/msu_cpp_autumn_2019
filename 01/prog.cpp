@@ -1,8 +1,8 @@
 #include <iostream>
 #include <string>
+#include <stdexcept>
 
-#define err -1
-#define err_str "BAD INPUT"
+const std::string err_str("BAD INPUT");
 
 bool is_operation(char c) 
 {
@@ -37,9 +37,9 @@ bool unary_minus(std::string str, size_t start_pos)
 }
 
 
-int get_number(std::string str) 
+int get_number(const std::string& str) 
 {   
-    std::string::iterator it = str.begin();
+    std::string::const_iterator it = str.begin();
     
     size_t minus_amnt = 0;
     while (it < str.end()) {
@@ -53,7 +53,8 @@ int get_number(std::string str)
         }
     }
     
-    if (it == str.end()) throw err;
+    if (it == str.end()) 
+        throw std::invalid_argument(err_str);
     
     int result = 0;
     bool number = false;
@@ -77,21 +78,20 @@ int get_number(std::string str)
                 
         } else {
         
-            throw err;
+            throw std::invalid_argument(err_str);
         }
         
     } else {
     
-        throw err;
+        throw std::invalid_argument(err_str);
     }
         
     return result;
 }
   
  
-int down(std::string str)
+int down(const std::string& str)
 {   
-    //std::cout<<"DOWN: "<< str <<std::endl;
     size_t pos;
     if ((pos = str.find('+')) != std::string::npos) {
         return down(str.substr(0, pos)) + down(str.substr((pos+1), str.length()));
@@ -121,13 +121,12 @@ int main(int argc, char* argv[])
             result = down(argv[1]);
             std::cout<< result <<std::endl;
             return 0;
-        } catch(int e) {
+        } catch(std::exception& exc) {
             std::cout<< err_str <<std::endl;
-            return e;
+            return -1;
         }
     } 
     
     std::cout << err_str << std::endl;
-    return err;
+    return -1;
 }
-    
