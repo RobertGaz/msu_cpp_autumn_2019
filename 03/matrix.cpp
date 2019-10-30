@@ -1,16 +1,23 @@
 #include "matrix.h"
 
-Row::Row(int *arr, std::size_t len) : row(arr), n_columns(len) {}
+Row::Row(int *arr, size_t len) : row(arr), n_columns(len) {}
 
-int& Row::operator[](std::size_t col) {
+int& Row::operator[](size_t col) {
     if (col >= n_columns)
         throw std::out_of_range("");
         
     return row[col];
 } 
 
+const int& Row::operator[](size_t col) const {
+    if (col >= n_columns)
+        throw std::out_of_range("");
+        
+    return row[col];
+} 
+    
 
-Matrix::Matrix(std::size_t rows, std::size_t cols) : n_rows(rows), n_columns(cols) {
+Matrix::Matrix(size_t rows, size_t cols) : n_rows(rows), n_columns(cols) {
     M = new int*[n_rows];
     for (int i = 0; i < n_rows; ++i) 
         M[i] = new int[n_columns];
@@ -33,13 +40,20 @@ size_t Matrix::getColumns() const {
 }
             
     
-Row Matrix::operator[](std::size_t row) {
+Row Matrix::operator[](size_t row) {
     if (row >= n_rows)
         throw std::out_of_range("");
         
     return Row(M[row], n_columns);
 } 
-    
+
+const Row Matrix::operator[](size_t row) const {
+    if (row >= n_rows)
+        throw std::out_of_range("");
+        
+    return Row(M[row], n_columns);
+} 
+
 Matrix& Matrix::operator*=(int a) {
     for (int i = 0; i < n_rows; ++i) 
         for (int j = 0; j < n_columns; ++j)
