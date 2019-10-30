@@ -6,22 +6,23 @@
 class Row
 {
     int* row;
-    std::size_t n_columns;
+    size_t n_columns;
     
 public:
-    Row(int *arr, std::size_t len);
+    Row(int *arr, size_t len);
     
-    int& operator[](std::size_t col);
+    int& operator[](size_t col);
+    const int& operator[](size_t col) const;
 };
 
 class Matrix
 {
-    std::size_t n_rows;
-    std::size_t n_columns;
+    size_t n_rows;
+    size_t n_columns;
     int **M;
     
 public:
-    Matrix(std::size_t rows, std::size_t cols);
+    Matrix(size_t rows, size_t cols);
     
     ~Matrix();
     
@@ -30,7 +31,8 @@ public:
     size_t getColumns() const;
             
     
-    Row operator[](std::size_t row);
+    Row operator[](size_t row);
+    const Row operator[](size_t row) const;
     
     Matrix& operator*=(int a);
     
