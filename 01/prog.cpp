@@ -22,9 +22,9 @@ int get_digit(char c) {
     return c - '0';
 }
 
-bool unary_minus(std::string str, size_t start_pos)
+bool unary_minus(const std::string& str, size_t start_pos)
 {
-    int pos = start_pos-1; 
+    int pos = start_pos - 1; 
     
     while (pos >= 0) {
         if (get_digit(str[pos]) >= 0) 
