@@ -68,7 +68,7 @@ private:
     static const unsigned char bufsize = 20;
     static const char separator = ' ';
     std::istream& in;
-    std::array<char, 20> buf;
+    std::array<char, bufsize> buf;
 
     void flush_buf();
     
@@ -77,7 +77,7 @@ private:
     
     template <class... Types>
     Error process(bool& val, Types& ... args) {
-        in.getline(&buf[0], 20, separator);
+        in.getline(&buf[0], bufsize, separator);
         if (std::string(&buf[0]) == "")
             return CorruptedArchive;
         if (std::string(&buf[0]) == "true")
@@ -93,7 +93,7 @@ private:
     
     template <class... Types>
     Error process(uint64_t& val, Types& ... args) {
-        in.getline(&buf[0], 20, separator);
+        in.getline(&buf[0], bufsize, separator);
         
         unsigned num;
         uint64_t res = 0;
