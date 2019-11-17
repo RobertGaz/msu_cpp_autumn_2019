@@ -17,7 +17,7 @@ void Deserializer::flush_buf() {
     
     
 Error Deserializer::process() {
-    in.getline(&buf[0], 20, separator);
+    in.getline(&buf[0], bufsize, separator);
     if (std::string(&buf[0]) != "")
         return CorruptedArchive;
     return NoError;
