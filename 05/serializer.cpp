@@ -8,15 +8,15 @@ Error Serializer::serialize_value(uint64_t val) {
 }
     
 Error Serializer::serialize_value(bool val) {
-	if (val) out << "true" << separator;
-	else out << "false" << separator;
+    if (val) out << "true" << separator;
+    else out << "false" << separator;
     
-	return NoError;
+    return NoError;
 }
 
 Error Serializer::process() 
-{
-	return NoError;
+{ 
+    return NoError;
 }
 
    
@@ -25,8 +25,8 @@ Deserializer::Deserializer(std::istream& in_stream) : in(in_stream) {}
 
 Error Deserializer::deserialize_value(bool& val) 
 {
-	buf = "";
-	std::getline(in, buf, separator);
+    buf = "";
+    std::getline(in, buf, separator);
             
     if (buf == "")
         return CorruptedArchive;
@@ -42,8 +42,8 @@ Error Deserializer::deserialize_value(bool& val)
     
 Error Deserializer::deserialize_value(uint64_t& val) 
 {	
-	buf = "";
-	std::getline(in, buf, separator);
+    buf = "";
+    std::getline(in, buf, separator);
         
     unsigned num;
     uint64_t res = 0;
