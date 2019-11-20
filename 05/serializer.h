@@ -23,7 +23,7 @@ public:
     }
     
     template <class... Types>
-    Error operator()(Types&... args) {
+    Error operator()(Types... args) {
         return process(args...);
     }
     
@@ -31,17 +31,14 @@ private:
     static const char separator = ' ';
     std::ostream& out;
     
-    template <class T>
-    Error process(T val) {
-        out<<val<<' ';
-        return NoError;
-    }
+    Error serialize_value(uint64_t val);
+    Error serialize_value(bool val);
     
-    Error process(bool val);
+    Error process();
     
     template <class T, class ... Types>
-    Error process(T& val, Types& ... args) {
-        if (process(val) != NoError)
+    Error process(T val, Types ... args) {
+        if (serialize_value(val) != NoError)
             return CorruptedArchive;
             
         return process(args...);
@@ -65,56 +62,25 @@ public:
     }
     
 private:
-    static const unsigned char bufsize = 20;
+    std::string buf;
     static const char separator = ' ';
     std::istream& in;
-    std::array<char, bufsize> buf;
-
-    void flush_buf();
     
+    Error deserialize_value(bool& val);
+    
+    Error deserialize_value(uint64_t& val);
     
     Error process();
     
-    template <class... Types>
-    Error process(bool& val, Types& ... args) {
-        in.getline(&buf[0], bufsize, separator);
-        if (std::string(&buf[0]) == "")
-            return CorruptedArchive;
-        if (std::string(&buf[0]) == "true")
-            val = true;
-        else if (std::string(&buf[0]) == "false")
-            val = false;
-        else 
-            return CorruptedArchive;
-        
-        flush_buf();
+    template <class T, class... Types>
+    Error process(T& val, Types& ... args) 
+    {
+        if (deserialize_value(val) != NoError)
+	        return CorruptedArchive;
+            
         return process(args...);
     }
     
-    template <class... Types>
-    Error process(uint64_t& val, Types& ... args) {
-        in.getline(&buf[0], bufsize, separator);
-        
-        unsigned num;
-        uint64_t res = 0;
-                
-        unsigned i = 0;
-        while (buf[i] != '\0') {
-            if (buf[i] < '0' or buf[i] > '9')
-                return CorruptedArchive;
-            
-            num = buf[i] - '0';
-            res *= 10;
-            res += num;
-                
-            ++i;
-        }
-        
-        val = res;
-        
-        flush_buf();
-        return process(args...);
-    }
     
 };
 
