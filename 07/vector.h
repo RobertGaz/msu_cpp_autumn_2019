@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <new>
 
 template <class T>
 class Allocator
@@ -7,15 +8,24 @@ public:
     using size_type = size_t;
     using value_type = T;
     using pointer = T*;
+    using const_reference = const T&;
     
     pointer allocate(size_type n) {
-        return static_cast <pointer> (malloc(n * sizeof(value_type)));
+        pointer result = static_cast <pointer> (malloc(n * sizeof(value_type)));
+        if (result == nullptr) 
+            throw std::bad_alloc();
     }
     
     void deallocate(pointer p, size_type n) {
-        for (size_type i = 0; i < n; ++i)
-            p[i].~value_type();
         free(p);
+    }
+    
+    void construct(pointer p, const_reference val) {
+        new((void *) p) value_type(val);
+    }   
+    
+    void destroy(pointer p) {
+        p->~value_type();
     }  
 };
 
@@ -122,32 +132,34 @@ public:
     using const_reverse_iterator = std::reverse_iterator<Iterator<const T>>;
     
     
-    explicit Vector(size_type count = 0) : vec_size(count), reserved(count) {
-        memory = Allocator();
+    explicit Vector(size_type count = 0) : memory(Allocator()), vec_size(count), reserved(count) {
         vec = memory.allocate(vec_size);
+        for (size_type i = 0; i < vec_size; ++i)
+            memory.construct(vec + i, value_type());
     }
     
-    Vector(size_type count, const_reference defaultValue) {
-        *this = Vector(count);
-        iterator it = this->begin();
-        while (it < this->end()) {
-            *it = defaultValue;
-            ++it;
-        }
+    Vector(size_type count, const_reference defaultValue) : memory(Allocator()), vec_size(count), reserved(count) {
+        vec = memory.allocate(vec_size);
+        for (size_type i = 0; i < vec_size; ++i)
+            memory.construct(vec + i, defaultValue);
     }
     
-    Vector(std::initializer_list<value_type> init) {
-        *this = Vector(init.size());
-        iterator vec_it = this->begin();
+    Vector(std::initializer_list<value_type> init) : memory(Allocator()), vec_size(init.size()), reserved(init.size()){
+        vec = memory.allocate(vec_size);
+        
+        size_type i = 0; 
         auto init_it = init.begin();
-        while (vec_it < this->end()) {
-            *vec_it = *init_it;
-            ++vec_it;
+        while (i < vec_size) {
+            memory.construct(vec + i, *init_it);
+            ++i;
             ++init_it;
-        }  
+        }         
     }
     
     ~Vector() {
+        for (size_type i = 0; i < vec_size; ++i)
+            memory.destroy(vec + i);
+            
         memory.deallocate(vec, vec_size);
     }
     
@@ -177,17 +189,18 @@ public:
     }
     
     void push_back(const value_type& value) {
-        reserve(vec_size + 1);
-        vec[vec_size++] = value;
+        resize(vec_size + 1, value);
     }
     
     void push_back(value_type&& value) {
         reserve(vec_size + 1);
-        vec[vec_size++] = std::forward<value_type>(value);
+        memory.construct(vec + vec_size, std::forward<value_type>(value));
+        vec_size++;
     }
     
     void pop_back() {
-        resize(vec_size - 1);
+        if (not empty())
+            resize(vec_size - 1);
     }
     
     bool empty() const {
@@ -202,10 +215,10 @@ public:
         if (newSize > vec_size) {
             reserve(newSize);
             for (size_type i = vec_size; i < newSize; ++i)
-                vec[i] = defaultValue;    
+                memory.construct(vec + i, defaultValue);
         } else {
             for (size_type i = newSize; i < vec_size; ++i)
-                vec[i].~value_type();
+                memory.destroy(vec + i);
         }
         
         vec_size = newSize;
@@ -222,7 +235,11 @@ public:
             }        
                 
             pointer newData = memory.allocate(to_reserve);
-            std::copy(vec, vec + vec_size, newData);
+            for (size_type i = 0; i < vec_size; ++i)
+                memory.construct(newData + i, vec[i]);
+            for (size_type i = 0; i < vec_size; ++i)
+                memory.destroy(vec + i);
+                   
             memory.deallocate(vec, vec_size);
             vec = newData;
             reserved = to_reserve;
