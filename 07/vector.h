@@ -22,6 +22,10 @@ public:
     
     void construct(pointer p, const_reference val) {
         new((void *) p) value_type(val);
+    } 
+    
+    void construct(pointer p, T&& val) {
+        new((void *) p) value_type(std::move(val));
     }   
     
     void destroy(pointer p) {
@@ -194,7 +198,7 @@ public:
     
     void push_back(value_type&& value) {
         reserve(vec_size + 1);
-        memory.construct(vec + vec_size, std::forward<value_type>(value));
+        memory.construct(vec + vec_size, std::move(value));
         vec_size++;
     }
     
