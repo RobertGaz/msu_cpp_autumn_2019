@@ -9,6 +9,7 @@ using namespace std;
 
 const size_t typesize = sizeof(uint64_t);
 const string orig_file_name("orig.bin");
+const string sorted_file_name("sorted.bin");
 const size_t buf_size = 100000;
 
 mutex m;
@@ -173,7 +174,7 @@ int main()
     string filename1 = f1.get();
     string filename2 = f2.get();
     
-    merge(filename1, filename2, "sorted.bin");
+    merge(filename1, filename2, sorted_file_name);
     
     return 0;
 }
