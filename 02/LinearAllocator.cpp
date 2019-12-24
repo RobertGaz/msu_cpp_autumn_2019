@@ -1,6 +1,10 @@
 #include "LinearAllocator.h"
 
-LinearAllocator::LinearAllocator(size_t maxSize) : max_size(maxSize), data((char*) malloc(maxSize)) {
+LinearAllocator::LinearAllocator(size_t maxSize) : max_size(maxSize) {
+    data = reinterpret_cast<char*>(malloc(max_size));
+    if (!data)
+        throw std::bad_alloc();
+        
     cur_size = 0;
 }
     
