@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <string>
 #include <future>
+#include <stdexcept>
+#include <cstdio>
 
 using namespace std;
 
@@ -12,24 +14,14 @@ const string orig_file_name("orig.bin");
 const string sorted_file_name("sorted.bin");
 const size_t buf_size = 100000;
 
-mutex m;
-
-int comp(const void* a_, const void* b_) 
-{
-    const uint64_t *a = static_cast<const uint64_t *>(a_);
-    const uint64_t *b = static_cast<const uint64_t *>(b_);
-    
-    if (*a < *b) 
-        return -1;
-    else if (*a > *b)
-        return 1;
-    else 
-        return 0;
-} 
+const string open_err_str = "Can't open the file ";
+const string bad_data_err = "Incorrect data in the file ";
 
 size_t getFileSizeInBytes(string file_name)
 {
     ifstream file(file_name, ifstream::binary | ifstream::in);
+    if (!file.is_open())
+        throw runtime_error(open_err_str + file_name);
     file.seekg(0, ios::end);
     size_t res = file.tellg();
     
@@ -37,13 +29,20 @@ size_t getFileSizeInBytes(string file_name)
 }
 
 //merge sort of two files to the third one
-void merge(string file1_name, string file2_name, string out_name)
+void merge(const string& file1_name, const string& file2_name, const string& out_name)
 {
     ifstream file1(file1_name, ifstream::binary | ifstream::in);
+    if (!file1.is_open())
+        throw runtime_error(open_err_str + file1_name);
+        
     ifstream file2(file2_name, ifstream::binary | ifstream::in);
-    
+    if (!file2.is_open())
+        throw runtime_error(open_err_str + file2_name);
+        
     ofstream out_file(out_name, fstream::binary | fstream::out); 
-    
+    if (!out_file.is_open())
+        throw runtime_error(open_err_str + out_name);
+        
     uint64_t a, b;
     
     file1.read(reinterpret_cast<char*>(&a), typesize); 
@@ -70,64 +69,64 @@ void merge(string file1_name, string file2_name, string out_name)
         file2.read(reinterpret_cast<char*>(&b), typesize);
     } 
     
+    remove(file1_name.c_str());
+    remove(file2_name.c_str());
+    
 }
             
 
-string process(string filename)
+string process(const string& filename)
 {
     ifstream file(filename, ifstream::binary | ifstream::in);
-    uint64_t buf[buf_size];
+    if (!file.is_open())
+        throw runtime_error(open_err_str + filename);
+    
+    unique_ptr<uint64_t[]> buffer(new uint64_t[buf_size]);
+    uint64_t* buf = buffer.get();
     
     string thr_num = filename.substr(0, 1);
     
     size_t numbers_left = getFileSizeInBytes(filename)/typesize;
     size_t read_size;
     
-    string file1_name = "thr" + thr_num + "_main_0.bin";
-    string file2_name = "thr" + thr_num + "_new.bin";
+    string file1_name = "thr" + thr_num + "_file1_0.bin";
+    const string file2_name = "thr" + thr_num + "_file2.bin";
     string new_file1_name;
-    
-    //Debug info print
-    /*
-    {
-        unique_lock<mutex> lock(m);
-        cout<<"\nfilename: "<<filename<<endl;
-        cout<<"size: "<<getFileSizeInBytes(filename)/typesize<<endl;
-        cout<<"thr "<<thr_num<<", numbers_left: "<<numbers_left<<", buf_size: "<<buf_size<<endl;
-    }  
-    */
-    
-    //file1 - the main file, collects sorted sequence 
-    read_size = min(numbers_left, buf_size);
-    numbers_left -= read_size;
-     
-    file.read(reinterpret_cast<char*>(buf), read_size * typesize);
-    qsort(buf, read_size, typesize, comp);
-    
-    ofstream file1(file1_name, fstream::binary | fstream::out); 
-    file1.write(reinterpret_cast<char*>(buf), read_size * typesize);
-    file1.close();
+    string file_buf_name;
     
     
-    size_t cnt = 0;
-    //file2 - sorted sequence of buf_size, which is merging with file1
+   
+    // file1 - the main file, collects total sorted sequence 
+    // file2 - sorted sequence of buf_size
+    // every file2 mergs with file1
+    
+    size_t cnt = 0; 
     while (numbers_left) {
         read_size = min(numbers_left, buf_size);
         numbers_left -= read_size;
         
         file.read(reinterpret_cast<char*>(buf), read_size * typesize);
-        qsort(buf, read_size, typesize, comp);
-      
-        ofstream file2(file2_name, fstream::binary | fstream::out); 
-        file2.write(reinterpret_cast<char*>(buf), read_size * typesize);
-        file2.close();
+        std::sort(buf, buf + read_size);
         
+        if (cnt) 
+            file_buf_name = file2_name;
+        else 
+            file_buf_name = file1_name;
+            
+        ofstream file_buf(file_buf_name, fstream::binary | fstream::out); 
+        if (!file_buf.is_open())
+            throw runtime_error(open_err_str + file_buf_name);
         
-        //merging
-        new_file1_name =  "thr" + thr_num + "_main_" + to_string(cnt%2)+".bin";
-        merge(file1_name, file2_name, new_file1_name);
+        file_buf.write(reinterpret_cast<char*>(buf), read_size * typesize);
+        file_buf.close();
         
-        file1_name = new_file1_name;
+        if (cnt) {
+            // merging
+            new_file1_name =  "thr" + thr_num + "_file1_" + to_string(cnt%2)+".bin";
+            merge(file1_name, file2_name, new_file1_name);
+            
+            file1_name = new_file1_name;
+        }
         
         cnt++;
     }
@@ -138,43 +137,59 @@ string process(string filename)
    
 int main()
 {
-    ifstream orig_file(orig_file_name, ifstream::binary | ifstream::in);
+    try {
     
-    size_t fileSize = getFileSizeInBytes(orig_file_name);
-    if (fileSize % typesize) {
-        cout<<"ERROR: bad file"<<endl;
-        return 0;
+        ifstream orig_file(orig_file_name, ifstream::binary | ifstream::in);
+        if (!orig_file.is_open())
+            throw runtime_error(open_err_str + orig_file_name);
+        
+        size_t fileSize = getFileSizeInBytes(orig_file_name);
+        if (fileSize % typesize) 
+            throw runtime_error(bad_data_err + orig_file_name);
+            
+        fileSize /= typesize;
+        
+        
+        uint64_t val;
+        
+        //divide file into two files, which will be processed separately
+        ofstream file1("1.bin", fstream::binary | fstream::out);
+        if (!file1.is_open())
+            throw runtime_error(open_err_str + "1.bin");
+            
+        for (size_t i = 0; i < fileSize/2; ++i) {
+            orig_file.read(reinterpret_cast<char*>(&val), typesize);
+            file1.write(reinterpret_cast<char*>(&val), typesize);
+        }
+        
+        
+        ofstream file2("2.bin", fstream::binary | fstream::out);
+        if (!file2.is_open())
+            throw runtime_error(open_err_str + "2.bin");
+             
+        for (size_t i = fileSize/2; i < fileSize; ++i) {
+            orig_file.read(reinterpret_cast<char*>(&val), typesize);
+            file2.write(reinterpret_cast<char*>(&val), typesize);
+        }
+        
+        file1.close();
+        file2.close();
+        
+        future<string> f1 = async(launch::async, process, "1.bin");
+        future<string> f2 = async(launch::async, process, "2.bin");
+        
+        string filename1 = f1.get();
+        string filename2 = f2.get();
+        
+        remove("1.bin");
+        remove("2.bin");
+        
+        merge(filename1, filename2, sorted_file_name);
+        
+    } catch (exception& exc) {
+        cout << "Error! "<< exc.what() << endl; 
+        return -1;
     }
-    fileSize /= typesize;
-    
-    //cout<<"fileSize: "<<fileSize<<endl;
-    
-    
-    uint64_t val;
-    
-    //divide file into two files, which will be processed separately
-    ofstream file1("1.bin", fstream::binary | fstream::out);
-    for (size_t i = 0; i < fileSize/2; ++i) {
-        orig_file.read(reinterpret_cast<char*>(&val), typesize);
-        file1.write(reinterpret_cast<char*>(&val), typesize);
-    }
-    
-    ofstream file2("2.bin", fstream::binary | fstream::out); 
-    for (size_t i = fileSize/2; i < fileSize; ++i) {
-        orig_file.read(reinterpret_cast<char*>(&val), typesize);
-        file2.write(reinterpret_cast<char*>(&val), typesize);
-    }
-    
-    file1.close();
-    file2.close();
-    
-    future<string> f1 = async(launch::async, process, "1.bin");
-    future<string> f2 = async(launch::async, process, "2.bin");
-    
-    string filename1 = f1.get();
-    string filename2 = f2.get();
-    
-    merge(filename1, filename2, sorted_file_name);
     
     return 0;
 }
