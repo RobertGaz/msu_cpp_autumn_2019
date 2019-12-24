@@ -17,7 +17,7 @@ const size_t buf_size = 100000;
 const string open_err_str = "Can't open the file ";
 const string bad_data_err = "Incorrect data in the file ";
 
-size_t getFileSizeInBytes(string file_name)
+size_t getFileSizeInBytes(const string& file_name)
 {
     ifstream file(file_name, ifstream::binary | ifstream::in);
     if (!file.is_open())
