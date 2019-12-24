@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <stdexcept>
 
 class LinearAllocator
 {
@@ -16,4 +17,3 @@ private:
     size_t cur_size;
     char const * data;
 };
-
